@@ -1,5 +1,6 @@
 # MyIgnore
 *gz
+word2vec_model/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
