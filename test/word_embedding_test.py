@@ -41,6 +41,7 @@ for i, word in enumerate(w2v_mdl.wv.vocab):
 
 
 # sentences that we would like to get word embedding vector
+# all sentence must have same length (i.e. do padding first)
 sentences = [['i', 'love', 'you'], ['this', 'is', 'book']]
 sentences_id = np.array([[word2id[word] for word in _] for _ in sentences])
 print('sentences_id =\n{}'.format(sentences_id))
@@ -51,7 +52,8 @@ print('sentences_id.shape = {}'.format(sentences_id.shape))
 
 
 init_embedding_W = tf.constant_initializer(embedding_matrix)
-word_embeddings = tf.get_variable('word_embeddings', shape=[embedding_matrix.shape[0], embedding_matrix.shape[1]], 
+word_embeddings = tf.get_variable('word_embeddings',
+                                  shape=[embedding_matrix.shape[0], embedding_matrix.shape[1]], 
                                   initializer=init_embedding_W)
 
 
