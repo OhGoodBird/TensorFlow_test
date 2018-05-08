@@ -126,11 +126,11 @@ layer_dense2 = tf.layers.Dense(50, kernel_initializer=tf.random_normal_initializ
 dense_output = layer_dense1(feature)
 logits = tf.contrib.layers.fully_connected(dense_output, 1, activation_fn=None)
 
-sb = tf.subtract(target, logits)
 loss = tf.sqrt(tf.reduce_mean(tf.square(tf.subtract(logits, target))))
 optimizer = tf.train.GradientDescentOptimizer(learning_rate=0.001)
 optimizer = tf.contrib.estimator.clip_gradients_by_norm(optimizer, 5.0)
 train_step = optimizer.minimize(loss)
+
 
 #sess_config = tf.ConfigProto()
 #sess_config.gpu_options.allow_growth = True
@@ -146,7 +146,7 @@ sess_config.gpu_options.allow_growth = True
 with tf.Session(config=sess_config) as sess:
     writer = tf.summary.FileWriter("TensorBoard/", graph = sess.graph)
     sess.run(tf.global_variables_initializer())
-    for epoch in range(100):
+    for epoch in range(1000):
         epoch += 1
         epoch_loss = 0
         valid_loss = 0
