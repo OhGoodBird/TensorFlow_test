@@ -40,6 +40,26 @@ def getWordEmbedding(word2vec_model_path, extra_word=['_PAD_'], num_words=-1):
     return word2id, id2word, embedding_matrix
     
     
+def getLex(lex_path, extra_word=['_PAD_']):
+    word_list = []
+    fp = open(lex_path, 'r', encoding='utf8')
+    for line in fp:
+        line = line.strip()
+        word_list.append(line)
+    fp.close()
+    word2id = {}
+    id2word = {}
+    # extra_word part
+    for i, word in enumerate(extra_word):
+        word2id[word] = i
+        id2word[i] = word
+    # model words part
+    for i, word in enumerate(word_list):
+        word2id[word] = i + len(extra_word)
+        id2word[i+len(extra_word)] = word
+    return word2id, id2word
+    
+    
 def getLabelMap(filepath):
     labels = []
     label2id = {}
@@ -54,3 +74,12 @@ def getLabelMap(filepath):
         id2label[x] = labels[x]
         
     return (label2id, id2label)
+
+    
+def chkDirExistOrCreate(folder_path):
+    import os
+    if not os.path.exists(folder_path):
+        os.makedirs(folder_path)
+        os.chmod(folder_path, 0o777)
+                    
+                    
