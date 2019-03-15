@@ -19,6 +19,7 @@ def extract_mfcc(file_path):
 
 
 def _bytes_feature(value):
+    #return tf.train.Feature(bytes_list=tf.train.BytesList(value=[value.encode()]))
     return tf.train.Feature(bytes_list=tf.train.BytesList(value=[value]))
 
 def _float_feature(value):
@@ -30,39 +31,93 @@ def _int64_feature(value):
 
 
 
-def main_():
+def main():
     #print(extract_mfcc('t.wav').shape)
     wav_file_list = ['t1.wav', 't2.wav']
-    label_list = ['yes', 'no']
+    label_list = [b'yes', b'no']
     
+    
+    def serialize_example(feature):
+    #def serialize_example(feature, label):
+        feature = {
+            'feature': _float_feature(feature)
+        }
+        #feature = {
+        #    'label': _bytes_feature(label),
+        #    'feature': _float_feature(feature),
+        #}
+        example_proto = tf.train.Example(features=tf.train.Features(feature=feature))
+        return example_proto.SerializeToString()
+        
+    #def tf_serialize_example(feature, label):
+    #    tf_string = tf.py_function(
+    #        serialize_example, 
+    #        (feature, label),  # pass these args to the above function.
+    #        tf.string)      # the return type is <a href="../../api_docs/python/tf#string"><code>tf.string</code></a>.
+    #    return tf.reshape(tf_string, ()) # The result is a scalar
+        
+    def tf_serialize_example(feature):
+    #def tf_serialize_example(feature, label):
+        tf_string = tf.py_function(serialize_example, [feature], tf.string)
+        return tf.reshape(tf_string, ()) # The result is a scalar
+        #return tf_string # The result is a scalar
+        
     tfrecords_filename = 'data.tfrecord'
-    with tf.python_io.TFRecordWriter(tfrecords_filename) as writer:
-        for wav, label in zip(wav_file_list, label_list):
-            mfcc = extract_mfcc(wav)
-            mfcc = mfcc.tostring()
-            label = bytes(label, 'utf8')
-            #example = tf.train.Example(features=tf.train.Features(feature={
-            #            'feature': _bytes_feature(mfcc),
-            #            'label': _bytes_feature(label)}))
-            example = tf.train.Example(features=tf.train.Features(feature={
-                        'label': _bytes_feature(label)}))
-            writer.write(example.SerializeToString())
+    #with tf.python_io.TFRecordWriter(tfrecords_filename) as writer:
+    writer = tf.python_io.TFRecordWriter(tfrecords_filename)
+    mfccs = []
+    for wav, label in zip(wav_file_list, label_list):
+        mfcc = extract_mfcc(wav)
+        print(mfcc[0])
+        print(mfcc[-1])
+        print(mfcc.shape)
+        mfcc = mfcc.reshape((-1))
+        mfcc = mfcc.tobytes()
+        example_proto = tf.train.Example(features=tf.train.Features(feature={
+                                                                    'feature': _bytes_feature(mfcc)
+                                                                    }))
+        writer.write(example_proto.SerializeToString())
+    writer.close()
+    #exit(0)
+        
             
-            
-    tfrecords_filename = ['data.tfrecord']
-    filename_queue = tf.data.Dataset.from_tensor_slices(tfrecords_filename).repeat(1)
-    reader = tf.TFRecordReader()
-    _, serialized_example = reader.read(filename_queue)
+    # Create a description of the features.  
+    feature_description = {
+        'feature': tf.FixedLenFeature([], tf.string),
+    }
+    #feature_description = {
+    #    'label': tf.FixedLenFeature([], tf.string, default_value=''),
+    #    'feature': tf.FixedLenFeature([], tf.float32, default_value=0.0),
+    #}
     
-    #features = tf.parse_single_example(
-    #                serialized_example, features={'feature': tf.FixedLenFeature([], tf.float32),
-    #                                              'label': tf.FixedLenFeature([], tf.float32)})
-    features = tf.parse_single_example(
-                    serialized_example, features={'label': tf.FixedLenFeature([], tf.float32)})
-    print(features)
-
-
-def main():
+    def _parse_function(example_proto):
+        # Parse the input tf.Example proto using the dictionary above.
+        #return tf.decode_raw(tf.parse_single_example(example_proto, feature_description), tf.float32)
+        example = tf.parse_single_example(example_proto, feature_description)
+        return tf.decode_raw(example['feature'], tf.float64)
+    
+    filenames = [tfrecords_filename]
+    raw_dataset = tf.data.TFRecordDataset(filenames).map(_parse_function)
+    raw_record = raw_dataset.make_one_shot_iterator()
+    
+    
+    sess_config = tf.ConfigProto()
+    sess_config.gpu_options.allow_growth = True
+    sess = tf.Session(config=sess_config)
+    sess.run(tf.global_variables_initializer())
+    x = raw_record.get_next()
+    t = sess.run(x).reshape((-1, 39))
+    print(t[0])
+    print(t[-1])
+    print(t.shape)
+    x = raw_record.get_next()
+    t = sess.run(x).reshape((-1, 39))
+    print(t[0])
+    print(t[-1])
+    print(t.shape)
+    
+    
+def main_():
     #tfrecords_filename = 'data.tfrecord'
     #with tf.python_io.TFRecordWriter(tfrecords_filename) as writer:
     #    writer.write(bytes('hello world', 'utf8'))
